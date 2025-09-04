@@ -1,0 +1,56 @@
+# Telegram Bot Framework
+python-telegram-bot[all]==21.0.1
+
+# Web Scraping & HTTP
+requests==2.31.0
+beautifulsoup4==4.12.2
+aiohttp==3.9.1
+
+# Data Processing
+pandas==2.1.4
+numpy==1.24.4
+
+# Audio Processing
+gtts==2.4.0
+speechrecognition==3.10.0
+pydub==0.25.1
+
+# Task Scheduling
+apscheduler==3.10.4
+
+# Date Processing
+dateparser==1.2.0
+
+# Text Processing
+markdownify==0.11.6
+
+# Machine Learning - Classical
+scikit-learn==1.3.2
+
+# Deep Learning - PyTorch (CPU version)
+torch==2.8.0+cpu
+torchvision==0.18.0+cpu
+torchaudio==2.8.0+cpu
+
+# NLP & Transformers
+transformers==4.36.2
+tokenizers==0.15.0
+
+# Data Visualization
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Natural Language Processing
+nltk==3.8.1
+
+# API Integrations
+wikipedia-api==0.6.0
+
+# Additional utilities
+pathlib2==2.3.7
+python-dotenv==1.0.0
+
+# Machine Learning & Data Processing
+datasets
+huggingface_hub
+tqdm

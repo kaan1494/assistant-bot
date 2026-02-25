@@ -1,0 +1,34 @@
+services:
+  - type: worker
+    name: assistant-bot
+    env: python
+    plan: starter
+    region: frankfurt
+    branch: feature/windows-quickstart
+    buildCommand: pip install --upgrade pip && pip install -r requirements-render.txt
+    startCommand: python app.py
+    autoDeploy: true
+    envVars:
+      - key: TG_TOKEN
+        sync: false
+      - key: OWNER_ID
+        sync: false
+      - key: TZ
+        value: Europe/Istanbul
+
+  - type: cron
+    name: assistant-news-cron
+    env: python
+    plan: starter
+    region: frankfurt
+    branch: feature/windows-quickstart
+    schedule: "*/15 * * * *"
+    buildCommand: pip install --upgrade pip && pip install -r requirements-render.txt
+    startCommand: python news_cron.py
+    envVars:
+      - key: TG_TOKEN
+        sync: false
+      - key: OWNER_ID
+        sync: false
+      - key: TZ
+        value: Europe/Istanbul

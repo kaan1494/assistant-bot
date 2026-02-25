@@ -1,0 +1,103 @@
+# Python sanal ortamı
+.venv/
+venv/
+env/
+
+# Python cache dosyaları
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Jupyter Notebook checkpoint'leri
+*.ipynb_checkpoints
+.ipynb_checkpoints/
+
+# Raw veri dosyaları
+data/raw/*.jsonl
+data/raw/*.jsonl.gz
+data/raw/*.jsonl.bz2
+data/raw/*/*.jsonl
+data/raw/*/*.jsonl.gz
+data/raw/*/*.jsonl.bz2
+
+# FAISS index dosyaları
+data/**/*.faiss
+data/**/*.index
+*.faiss
+*.index
+
+# Model dosyaları (büyük boyutlular)
+models/
+checkpoints/
+*.bin
+*.safetensors
+*.pt
+*.pth
+
+# Veritabanı dosyaları
+*.db
+*.sqlite
+*.sqlite3
+
+# KİŞİSEL VERİLER - GİZLİLİK KORUMASI
+# Ses kayıtları (kullanıcı ses mesajları)
+data/voice/
+data/tts/
+*.ogg
+*.oga
+*.wav
+*.mp3
+
+# Kişisel notlar ve belgeler
+data/notes/
+data/docs/
+
+# Token ve kimlik bilgileri
+TOKEN
+*.token
+bot_token.txt
+
+# Log dosyaları
+*.log
+logs/
+
+# IDE ve editor dosyaları
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS dosyaları
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Geçici dosyalar
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Konfigürasyon dosyaları (API anahtarları içerebilir)
+config.py
+.env
+.env.local
+
+# Backup dosyaları
+*.bak
+*.backup
+
+# Çıktı dosyaları
+output/
+results/
+experiments/
+
+# Test dosyaları
+test_output/
+test_results/

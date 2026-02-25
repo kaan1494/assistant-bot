@@ -131,13 +131,84 @@ def fetch_donanimhaber_news():
                 elif not link.startswith('http'):
                     link = 'https://www.donanimhaber.com/' + link
                 
-                # Resim bul
-                img_elem = article.find('img')
+                # Resim bul - GELİŞTİRİLMİŞ ARAMA
                 image_url = None
+                
+                # 1) Önce article içinde ara
+                img_elem = article.find('img')
                 if img_elem:
-                    image_url = img_elem.get('src') or img_elem.get('data-src')
-                    if image_url and image_url.startswith('/'):
+                    image_url = img_elem.get('src') or img_elem.get('data-src') or img_elem.get('data-lazy-src')
+                
+                # 2) Parent elementlerde ara (WebTekno tarzı)
+                if not image_url:
+                    parent_elem = article.parent
+                    for level in range(4):  # 4 seviye yukarı çık
+                        if parent_elem:
+                            img_elem = parent_elem.find('img')
+                            if img_elem:
+                                image_url = img_elem.get('src') or img_elem.get('data-src') or img_elem.get('data-lazy-src')
+                                if image_url:
+                                    break
+                            parent_elem = parent_elem.parent
+                        else:
+                            break
+                
+                # 3) Sibling elementlerde ara (yan kardeş elementler)
+                if not image_url and article.parent:
+                    siblings = article.parent.find_all(['img', 'div', 'figure'], recursive=False)
+                    for sibling in siblings:
+                        img_elem = sibling.find('img') if sibling.name != 'img' else sibling
+                        if img_elem:
+                            image_url = img_elem.get('src') or img_elem.get('data-src') or img_elem.get('data-lazy-src')
+                            if image_url:
+                                break
+                
+                # 4) Link içeriğinde ara (haber detay sayfasından resim çek)
+                if not image_url:
+                    try:
+                        # Haber sayfasının içeriğini çek (hızlı)
+                        detail_response = requests.get(link, headers=headers, timeout=5)
+                        if detail_response.status_code == 200:
+                            detail_soup = BeautifulSoup(detail_response.content, 'html.parser')
+                            
+                            # Çeşitli resim seçicilerini dene
+                            img_selectors = [
+                                'meta[property="og:image"]',
+                                'meta[name="twitter:image"]', 
+                                '.news-image img',
+                                '.article-image img',
+                                '.content-image img',
+                                'article img',
+                                '.main-image img'
+                            ]
+                            
+                            for selector in img_selectors:
+                                element = detail_soup.select_one(selector)
+                                if element:
+                                    if element.name == 'meta':
+                                        image_url = element.get('content')
+                                    else:
+                                        image_url = element.get('src') or element.get('data-src')
+                                    if image_url:
+                                        break
+                    except:
+                        pass  # Hızlı çekme başarısız olursa geç
+                
+                # URL düzeltme ve filtreleme
+                if image_url:
+                    # Base64 placeholder'ları filtrele
+                    if image_url.startswith('data:image/'):
+                        print(f"🚫 Base64 placeholder filtrelendi: {image_url[:50]}...")
+                        image_url = None
+                    elif image_url.startswith('/'):
                         image_url = 'https://www.donanimhaber.com' + image_url
+                    elif image_url.startswith('//'):
+                        image_url = 'https:' + image_url
+                    
+                    # Çok küçük resimları filtrele (1x1 pixel gibi)
+                    if image_url and any(size in image_url.lower() for size in ['1x1', '2x1', '1x2']):
+                        print(f"🚫 Çok küçük resim filtrelendi: {image_url}")
+                        image_url = None
                 
                 # Özet bul
                 summary = ""
@@ -229,20 +300,77 @@ def fetch_webtekno_news():
                 elif not link.startswith('http'):
                     link = 'https://www.webtekno.com/' + link
                 
-                # Resim bul (parent elementlerde ara)
+                # Resim bul - GELİŞTİRİLMİŞ ARAMA (WebTekno için)
                 image_url = None
+                
+                # 1) Parent elementlerde ara (mevcut)
                 parent_elem = article.parent
-                for _ in range(3):  # 3 seviye yukarı çık
+                for level in range(4):  # 4 seviye yukarı çık
                     if parent_elem:
                         img_elem = parent_elem.find('img')
                         if img_elem:
-                            image_url = img_elem.get('src') or img_elem.get('data-src')
-                            if image_url and image_url.startswith('/'):
-                                image_url = 'https://www.webtekno.com' + image_url
-                            break
+                            image_url = img_elem.get('src') or img_elem.get('data-src') or img_elem.get('data-lazy-src')
+                            if image_url:
+                                break
                         parent_elem = parent_elem.parent
                     else:
                         break
+                
+                # 2) Sibling elementlerde ara
+                if not image_url and article.parent:
+                    siblings = article.parent.find_all(['img', 'div', 'figure'], recursive=False)
+                    for sibling in siblings:
+                        img_elem = sibling.find('img') if sibling.name != 'img' else sibling
+                        if img_elem:
+                            image_url = img_elem.get('src') or img_elem.get('data-src') or img_elem.get('data-lazy-src')
+                            if image_url:
+                                break
+                
+                # 3) Haber detay sayfasından resim çek
+                if not image_url:
+                    try:
+                        detail_response = requests.get(link, headers=headers, timeout=5)
+                        if detail_response.status_code == 200:
+                            detail_soup = BeautifulSoup(detail_response.content, 'html.parser')
+                            
+                            # WebTekno için özel seçiciler
+                            img_selectors = [
+                                'meta[property="og:image"]',
+                                'meta[name="twitter:image"]',
+                                '.article-header img',
+                                '.post-thumbnail img', 
+                                '.featured-image img',
+                                'article img',
+                                '.content img'
+                            ]
+                            
+                            for selector in img_selectors:
+                                element = detail_soup.select_one(selector)
+                                if element:
+                                    if element.name == 'meta':
+                                        image_url = element.get('content')
+                                    else:
+                                        image_url = element.get('src') or element.get('data-src')
+                                    if image_url:
+                                        break
+                    except:
+                        pass
+                
+                # URL düzeltme ve filtreleme
+                if image_url:
+                    # Base64 placeholder'ları filtrele
+                    if image_url.startswith('data:image/'):
+                        print(f"🚫 Base64 placeholder filtrelendi: {image_url[:50]}...")
+                        image_url = None
+                    elif image_url.startswith('/'):
+                        image_url = 'https://www.webtekno.com' + image_url
+                    elif image_url.startswith('//'):
+                        image_url = 'https:' + image_url
+                    
+                    # Çok küçük resimler ve lazy loading placeholder'ları filtrele
+                    if image_url and any(indicator in image_url.lower() for indicator in ['1x1', '2x1', '1x2', 'placeholder', 'lazy']):
+                        print(f"🚫 Placeholder/küçük resim filtrelendi: {image_url}")
+                        image_url = None
                 
                 # Özet yoksa başlığı kısalt
                 summary = title[:200] if len(title) > 200 else ""
@@ -287,7 +415,7 @@ def save_news(news_items):
             
             if not existing:
                 # Yeni haber, kaydet
-                conn.execute("""
+                cursor = conn.execute("""
                     INSERT INTO ai_news (title, url, summary, image_url, publish_date, content_hash, source, created_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
@@ -300,7 +428,9 @@ def save_news(news_items):
                     news.get('source', 'Unknown'),
                     dt.datetime.now().isoformat()
                 ))
-                new_news.append(news)
+                news_with_id = dict(news)
+                news_with_id['id'] = cursor.lastrowid
+                new_news.append(news_with_id)
                 print(f"💾 Yeni haber kaydedildi: {news['title'][:50]}...")
             else:
                 print(f"📰 Mevcut haber: {news['title'][:50]}...")

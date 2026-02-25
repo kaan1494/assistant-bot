@@ -111,11 +111,180 @@ python -m venv .venv
 # 2. Tüm bağımlılıkları kur
 pip install -r requirements.txt
 
-# 3. Botu başlat
+# 3. Türkçe korpus verilerini indir
+python download_tr_capped.py
+
+# 4. Botu başlat
 python app.py
 ```
 
 > 💡 **Not**: Bot token'ını `app.py` dosyasında güncellemeyi unutmayın!
+
+## ☁️ Render'da 7/24 Çalıştırma
+
+Bu proje Telegram bot olduğu için Render'da **Web Service** yerine **Background Worker** olarak çalıştırılmalıdır.
+
+### 1) GitHub ile güvenli senkron
+
+Yerelde değişikliklerin olduğu için önce korumaya al:
+
+```powershell
+# Değişiklikleri geçici sakla
+git stash push -u -m "local-before-render"
+
+# Uzak dalı güncelle
+git fetch origin
+
+# Bu proje için ana çalışma dalı
+git checkout feature/windows-quickstart
+
+# Uzak dal ile senkron
+git pull origin feature/windows-quickstart
+
+# Gerekirse yerel değişiklikleri geri getir
+git stash pop
+```
+
+### 2) Render Blueprint ile deploy
+
+Bu repoda `render.yaml` ve `requirements-render.txt` hazır.
+
+- Render panelinde **New + -> Blueprint** seç
+- GitHub repo'yu bağla
+- `render.yaml` otomatik algılanır
+- Servis türü: `worker` (7/24 çalışır)
+
+### 3) Render ortam değişkenleri
+
+Render servisinde şu değişkenleri ekle:
+
+- `TG_TOKEN` = Telegram bot token
+- `OWNER_ID` = kendi Telegram kullanıcı ID
+- `TZ` = `Europe/Istanbul`
+
+### 4) Çalıştırma komutları
+
+- Build: `pip install --upgrade pip && pip install -r requirements-render.txt`
+- Start: `python app.py`
+
+### 5) Önemli not
+
+Free plan politikaları değişebildiği için gerçek 7/24 çalışma için Render'da genelde **Starter/paid worker** gerekir.
+
+## 📊 Türkçe Korpus İndirme Sistemi
+
+### Korpus İndiricisi - `download_tr_capped.py`
+
+Hugging Face'ten Türkçe korpusları boyut sınırlı şekilde indiren streaming downloader:
+
+**Desteklenen Kaynaklar:**
+- **Wikipedia (20231101.tr)**: 1.2 GB limit - 645,768 makale
+- **OSCAR-2301 (tr)**: 2.0 GB limit - CommonCrawl verisi  
+- **mC4 (tr)**: 1.6 GB limit - Çokdilli C4 korpusu
+
+**Toplam Hedef**: ~4.8 GB Türkçe korpus
+
+### Çalıştırma
+
+```bash
+# Tüm korpusları indir
+python download_tr_capped.py
+
+# Sadece belirli kaynağı indir
+python download_tr_capped.py --source wikipedia
+python download_tr_capped.py --source oscar
+python download_tr_capped.py --source mc4
+
+# Bağlantı testi (indirme yapma)
+python download_tr_capped.py --dry-run
+```
+
+### Boyut Kontrol (Windows PowerShell)
+
+```powershell
+gci data\raw\tr_wikipedia\wikipedia_tr.jsonl | select Name,Length
+gci data\raw\tr_oscar\oscar_tr.jsonl | select Name,Length
+gci data\raw\tr_mc4\mc4_tr.jsonl | select Name,Length
+```
+
+### Gerekirse Sıkıştırma
+
+```python
+import gzip, shutil, pathlib
+for f in ["data/raw/tr_wikipedia/wikipedia_tr.jsonl",
+          "data/raw/tr_oscar/oscar_tr.jsonl", 
+          "data/raw/tr_mc4/mc4_tr.jsonl"]:
+    p = pathlib.Path(f)
+    if p.exists() and not p.with_suffix(p.suffix+".gz").exists():
+        with open(p,"rb") as fin, gzip.open(str(p)+".gz","wb") as fout:
+            shutil.copyfileobj(fin, fout)
+print("gzipped")
+```
+
+### Veri Yenileme
+
+```bash
+# Tools modülü ile korpus güncelleme
+python -m tools.fetch_tr_data
+
+# Sadece belirli kaynak
+python -m tools.fetch_tr_data --source wikipedia
+python -m tools.fetch_tr_data --source oscar
+python -m tools.fetch_tr_data --source mc4
+
+# Dosya durumu kontrol
+python -m tools.fetch_tr_data --check
+```
+
+### Korpus Test Komutları
+
+```bash
+# Korpus okuyucu testi
+python corpus_reader.py
+
+# AI sistemi korpus entegrasyonu testi (YENİ)
+python smart_assistant_korpus.py
+
+# Korpus entegrasyonu ile yanıt testi
+python -c "
+from smart_assistant_korpus import SmartAssistant
+assistant = SmartAssistant()
+print('📊 Korpus durumu:')
+info = assistant.get_corpus_info()
+print(f\"Aktif: {info['available']}\")
+if info['available']:
+    for src, stats in info['stats'].items():
+        if stats['exists']:
+            print(f\"  {src}: {stats['size_mb']:.1f} MB\")
+print('\n🔍 Test araması:')
+response = assistant.search_and_respond(12345, 'teknoloji hakkında')
+print(response[:300] + '...' if response and len(response) > 300 else response)
+"
+
+# Korpus arama testi
+python -c "
+from corpus_reader import TurkishCorpusReader
+reader = TurkishCorpusReader()
+results = reader.search_text('yapay zeka', limit=3)
+for r in results:
+    print(f\"{r['source']}: {r['text'][:150]}...\")
+"
+```
+
+### Kabul Kriteri
+
+✅ **Başarılı kurulum kontrolü:**
+- [ ] 3 korpus dosyası indirilmiş (Wikipedia, OSCAR, mC4)
+- [ ] Toplam boyut 4-6 GB arasında
+- [ ] AI sistemi korpusları okuyabiliyor
+- [ ] Arama fonksiyonu çalışıyor
+- [ ] Bot korpus bilgisiyle yanıt verebiliyor
+
+```powershell
+# Hızlı doğrulama
+gci data\raw\tr_*\*.jsonl | select Name,Length | ft
+python -c "from smart_assistant import SmartAssistant; print('Korpus:', SmartAssistant().get_corpus_info()['available'])"
+```
 
 ---
 

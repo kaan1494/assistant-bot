@@ -4,7 +4,7 @@ services:
     env: python
     plan: starter
     region: frankfurt
-    branch: feature/windows-quickstart
+    branch: main
     buildCommand: pip install --upgrade pip && pip install -r requirements-render.txt
     startCommand: python app.py
     autoDeploy: true
@@ -21,7 +21,7 @@ services:
     env: python
     plan: starter
     region: frankfurt
-    branch: feature/windows-quickstart
+    branch: main
     schedule: "*/15 * * * *"
     buildCommand: pip install --upgrade pip && pip install -r requirements-render.txt
     startCommand: python news_cron.py
